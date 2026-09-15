@@ -1,0 +1,60 @@
+FUNCTION_BLOCK FB_Cylinder2Coil
+VAR_INPUT
+    Enable : BOOL;
+    Reset : BOOL;
+    CmdHome : BOOL;
+    CmdWork : BOOL;
+    PermitHome : BOOL;
+    PermitWork : BOOL;
+    HomeSensor : BOOL;
+    WorkSensor : BOOL;
+    CycleMs : UDINT;
+    TimeoutMs : UDINT;
+END_VAR
+VAR_OUTPUT
+    HomeValve : BOOL;
+    WorkValve : BOOL;
+    AtHome : BOOL;
+    AtWork : BOOL;
+    Busy : BOOL;
+    Fault : BOOL;
+    FaultID : UINT;
+END_VAR
+VAR
+    Elapsed : UDINT;
+    PreviousHome : BOOL;
+    PreviousWork : BOOL;
+END_VAR
+//{st}
+(* Device function only: no conveyor, material sensor or machine step number.
+   CycleMs must match one invocation per task cycle. Parameters are caller-owned.
+   De-energizing a bistable valve does not imply mechanical stopping/retraction. *)
+AtHome := HomeSensor AND NOT WorkSensor;
+AtWork := WorkSensor AND NOT HomeSensor;
+IF Reset AND NOT CmdHome AND NOT CmdWork AND NOT (HomeSensor AND WorkSensor) THEN
+    Fault := FALSE; FaultID := 0;
+END_IF;
+IF Enable THEN
+    IF (CycleMs = 0) OR (TimeoutMs = 0) OR (CycleMs > TimeoutMs) THEN
+        Fault := TRUE; FaultID := 1;
+    ELSIF HomeSensor AND WorkSensor THEN
+        Fault := TRUE; FaultID := 2;
+    ELSIF CmdHome AND CmdWork THEN
+        Fault := TRUE; FaultID := 3;
+    END_IF;
+END_IF;
+HomeValve := Enable AND NOT Fault AND CmdHome AND PermitHome AND NOT CmdWork;
+WorkValve := Enable AND NOT Fault AND CmdWork AND PermitWork AND NOT CmdHome;
+Busy := (HomeValve AND NOT AtHome) OR (WorkValve AND NOT AtWork);
+IF (HomeValve <> PreviousHome) OR (WorkValve <> PreviousWork) OR NOT Busy THEN
+    Elapsed := 0;
+ELSIF Elapsed >= TimeoutMs THEN
+    Fault := TRUE; FaultID := 4;
+ELSIF CycleMs >= TimeoutMs - Elapsed THEN
+    Elapsed := TimeoutMs;
+ELSE Elapsed := Elapsed + CycleMs;
+END_IF;
+PreviousHome := HomeValve; PreviousWork := WorkValve;
+IF Fault THEN HomeValve := FALSE; WorkValve := FALSE; Busy := FALSE; END_IF;
+//{end}
+END_FUNCTION_BLOCK
