@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+*.smc
+*.smc2
+reports/
