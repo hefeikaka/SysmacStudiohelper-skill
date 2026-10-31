@@ -10,6 +10,7 @@
 python scripts/check_exports.py aml <硬件文件.aml>
 python scripts/check_exports.py axis <轴设置.xml> --pulse-velocity-limit <目标允许的脉冲每秒上限>
 python scripts/check_exports.py bindings <程序.xml> --contract <已核对的轴引用.json>
+python scripts/check_fb_limits.py <完整声明.iec> <最终导出.xml>
 python scripts/test_checks.py
 ```
 
@@ -40,5 +41,6 @@ contract 必须来自目标全局变量表/已读取工程及工艺依赖，不�
 |轴最大速度换算超限|更改 pulse/mm 后沿用不匹配的默认速度|要求速度参数存在，按比例换算并与目标上限比较；程序命令与轴上限另行核对|
 |命名轴和系统轴都报未定义|生成正文时没有补齐 POU 外部声明；只改名字无效|从目标轴绑定建立 contract，检查每个必要外部引用是否声明|
 |外部/全局常量属性不匹配|ExternalVars 省略 constant 后默认 false，并非继承全局属性|比较目标属性和声明；保持原全局绑定，修正外部声明|
+|输入变量个数超过64|只数64根轴，漏算另外5个控制输入，实际69个|对完整声明及最终XML逐参数组计数；运行check_fb_limits.py并拒绝超限交付；分组遵从用户要求|
 
 这些检查不是承诺以后不会出错，而是把已暴露的问题变成可运行的检查项。新错误先保存实际诊断，再补必要检查，不把每次修复堆成互相矛盾的默认规则。
