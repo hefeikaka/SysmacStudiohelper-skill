@@ -8,6 +8,7 @@ import xml.etree.ElementTree as E
 
 N='{www.iec.ch/public/TC65SC65BWG7TF10}'
 KNOWN_INSTRUCTIONS={'limit'}
+KNOWN_KEYWORDS={'step'} # Confirmed Sysmac native reserved-keyword declaration failure.
 
 def validate(root, namespaces=()):
     reserved={n.casefold() for n in namespaces}
@@ -29,11 +30,13 @@ def validate(root, namespaces=()):
             errors.append('NAMESPACE_NAME_CONFLICT: '+name)
         if name.casefold() in KNOWN_INSTRUCTIONS:
             errors.append('INSTRUCTION_NAME_CONFLICT: '+name)
+        if name.casefold() in KNOWN_KEYWORDS:
+            errors.append('RESERVED_KEYWORD_NAME: '+name)
     return sorted(set(errors))
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('xml');p.add_argument('--namespace',action='append',default=[])
     a=p.parse_args();errors=validate(E.parse(a.xml).getroot(),a.namespace)
-    print(json.dumps({'errors':errors,'scope':'user P_ prefix; known LIMIT instruction; supplied/inferred library namespaces; not a complete compiler'},ensure_ascii=False,indent=2))
+    print(json.dumps({'errors':errors,'scope':'user P_ prefix; known LIMIT instruction and STEP keyword; supplied/inferred library namespaces; not a complete compiler'},ensure_ascii=False,indent=2))
     raise SystemExit(bool(errors))

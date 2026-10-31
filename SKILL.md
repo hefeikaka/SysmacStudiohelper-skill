@@ -22,6 +22,8 @@ description: 读取和修改欧姆龙 NJ/NX Sysmac 工程，生成设备 FB、�
 - 工艺语言按 [自动化语义与默认设备](references/process-language.md) 解释。优先应用现有工程和用户授权的设备默认配置，集中列出假设，避免重复追问；随附双控气缸和输送示例仅在配置匹配时使用，不能推定所有现场硬件相同。
 - 新增 FB 按设备或功能封装，跨设备的工艺步骤号、步序转换和循环状态放在程序段。FB 只维护本功能必需的状态、互锁、命令完成和诊断。
 - FB外部数据通过明确接口连接，实例状态留在内部；不要用隐藏的项目全局变量缩短调用。开放数组、读写约定及梯形图接口按 [FB接口设计](references/fb-interfaces.md) 核对。
+- 精简变量、嵌套数组、实例缓存或比较输入与输入输出耗时时，读 [内存与复制开销](references/memory-and-copying.md)。按实例展开核算，区分声明字段节省量、原生编译RAM与实测任务时间；只读引用不等于跨任务快照。
+- 修改FB/FUN引脚前后必须核对参数组数量，并运行 `scripts/check_fb_limits.py` 检查完整IEC声明及最终XML。NJ/NX各输入、输出、输入输出组分别最多64个；控制输入与设备输入合并计数。超过上限不得交付为可用版本，XSD和解释器通过不能替代此检查。分组方式遵从用户要求，不为凑数量擅改业务参数。
 - 先查厂商系统结构和既有设备/命令结构，能直接复用的由FB接收结构引用并在内部读取，不要求调用者逐字段拆解再接线。按 [原生结构复用](references/native-structures.md) 核对字段含义、单位和缺口，不把当前指令值当最终目标。
 - 用户先发工程时，先读结构并建立模板档案；需求尚未到达时保存分析结果，后续按该模板扩展，优先复用适合的 FB/ST，保留原层级和条件执行语义。
 - 每次生成交付都包含导入步骤与程序框架说明，说明程序段顺序、FB 职责、I/O/变量关系和测试边界。
@@ -30,16 +32,20 @@ description: 读取和修改欧姆龙 NJ/NX Sysmac 工程，生成设备 FB、�
 ## 选择工作方式
 
 - 读取、解释或优化现有工程：先读 [工程读取与语义保留](references/project-reading.md)。
+- 核对设备采集表、结构成员、动作统计或解除已有采集映射注释时：读 [采集信号与事件核对](references/signal-mapping.md)。
+- 向既有程序 Inline ST 新增全局变量引用时，核对所属 POU 的外部声明；可用 `scripts/check_inline_global_refs.py` 做针对性检查，限制见 [验证与能力证据](references/validation.md)。
 - 从工艺生成 ST、FB，补全工程或设计 PackML 接口：读 [程序与组态交付](references/generation.md)。
 - 测试、导出、汇报完成情况：读 [验证与能力证据](references/validation.md)。
 - 生成或修复程序/硬件/轴 XML 后：按 [可执行检查](references/executable-checks.md) 选择适用检查，准备独立的目标轴属性依据；不适用的范围另行说明。
 - 生成 FB 实例及共享数据时：读 [FB作用域与复合输出](references/fb-scope.md)，运行 `scripts/check_fb_scope.py`，避免把实例数组声明为全局变量。
+- 扩展多轴/多设备引脚时：按 [FB接口设计](references/fb-interfaces.md) 核对平台参数上限，运行 `scripts/check_fb_limits.py`；不要只数设备引脚，遗漏使能、复位及诊断接口。
 - 目标 CPU 版本、固定数组/开放数组兼容性、回绕计时、多QoS混合发送或 PLC 到 Broker 实测相关时：读 [版本兼容与通信实测](references/version-and-broker-validation.md)。
-- 检查用户名称是否使用厂商保留前缀（如`P_`），或与内置指令、已引用库命名空间冲突；运行 `scripts/check_identifier_conflicts.py` 检查已知冲突，同步检查声明与调用，并在Sysmac原生编译中确认其余名称。
+- 检查用户名称是否使用厂商保留前缀（如`P_`）、ST/SFC保留关键字（已确认`STEP`不能用作变量名），或与内置指令、已引用库命名空间冲突；运行 `scripts/check_identifier_conflicts.py` 检查已知冲突，同步检查声明与调用，并在Sysmac原生编译中确认其余名称。
 - 按 PPT/字段表扩展通信采集工程：读 [协议与模板集成](references/protocol-projects.md)，用 `scripts/check_wire_layout.py` 检查字段布局及发布接口容量。
 - 原平台实时或历史页面无数据时：读 [端到端数据链排查](references/data-chain-diagnosis.md)，沿 PLC→Broker→解析模板→存储/推送→原页面逐段定位；先核实任务实际周期与报文时间字段。
 - 多轴按动作抽样或估算并发容量时：读 [多轴抽样与容量](references/sampling-scheduling.md)，按实际任务余量和队列积压定容量，不把设备总数当同时采样数。
 - FB 过长、发送状态难读或原生编译报错时：读 [程序与组态交付](references/generation.md) 和 [验证与能力证据](references/validation.md)；分清协调层、私有辅助FB及第一条原生编译错误。
+- 新增日期时间变量或排查时间类型错误时：按 [验证与能力证据](references/validation.md) 核对 Sysmac 变量类型与字面量前缀；对 ZIP 型原生工程运行 `scripts/check_datetime_declarations.py`，检查已知的 `DT` 变量类型误写。
 
 ## 每次任务的共同约束
 

@@ -1,6 +1,6 @@
 # SysmacStudiohelper
 
-面向欧姆龙 NJ/NX 和 Sysmac Studio 的自动化工程 skill，当前版本 v0.9.5。把工艺口语转成设备接口、功能 FB、程序段步序、ST、变量/组态资料及操作说明；先收到已有工程时，读取框架并优先按模板复用。
+面向欧姆龙 NJ/NX 和 Sysmac Studio 的自动化工程 skill，当前版本 v0.9.8。把工艺口语转成设备接口、功能 FB、程序段步序、ST、变量/组态资料及操作说明；先收到已有工程时，读取框架并优先按模板复用。
 
 ## 范围
 
@@ -27,11 +27,14 @@
 |scripts/inspect_project.py|只读索引 ZIP 型工程的 Entity 和代码标记，不破解保护|
 |scripts/check_exports.py|检查 AML 顺序、轴速度换算、外部轴声明及常量属性|
 |scripts/check_wire_layout.py|检查固定二进制报文的类型宽度、数组维度、偏移、总长及传输容量|
+|scripts/check_fb_limits.py|检查NJ/NX完整IEC及XML中FB/FUN的三类参数组各自不超过64，包含控制引脚|
 |scripts/test_checks.py、scripts/test_initial.py|检查器及初版工具回归测试|
 |assets/FB_Cylinder2Coil.iec|单设备功能 FB 模板|
 |assets/PRG_Sequence.st|程序段中组织步序的示例|
 
 Python 工具仅依赖标准库，工程索引需要 Python 3.11+。运行 `python scripts/test_checks.py` 和 `python scripts/test_initial.py`。检查参数与限制见 references/executable-checks.md、references/process-language.md。
+
+修改接口后运行 `python scripts/check_fb_limits.py complete.iec delivered.xml`；超限即停止交付并修正。按用户指定的分组组织轴，不擅自改业务参数来凑引脚数量。此检查不替代Sysmac原生编译。
 
 通信模板扩展规则见 [protocol-projects.md](references/protocol-projects.md)。运行 `python scripts/check_wire_layout.py contract.json --capacity 2000` 可检查项目提供的字段契约；容量参数必须来自实际发布接口。`python scripts/test_wire_layout.py` 覆盖布局和容量错误。项目的实际数据格式不写死在skill中；命令中的容量仅为示例，必须替换为已确认的接口容量。
 
@@ -44,6 +47,8 @@ FB作用域与复合输出规则见 [fb-scope.md](references/fb-scope.md)。运�
 高速采样与慢速通信的拆分约定见 [multirate.md](references/multirate.md)：明确任务间交接对象、唯一写入者、原始时间、缓冲满处理、有界消费和启动/主动重载。程序数量按当前需求和任务边界确定；内部功能FB附说明，测试用TEST命名并独立交付。任务配置与原生性能需单独验证。
 
 原平台无数据显示时，按 [data-chain-diagnosis.md](references/data-chain-diagnosis.md) 沿同一条报文追踪采样、Broker、解析模板、入库/推送和原页面。大量轴按动作抽样及并发评估见 [sampling-scheduling.md](references/sampling-scheduling.md)：以实际任务余量、队列水位及低频轴采样公平性确定容量。
+
+设备采集表、结构成员、计数和动作时间映射的核对方法见 [signal-mapping.md](references/signal-mapping.md)。
 
 可选：自行取得 Jiecc 7.x 后运行 `python scripts/test_templates.py --jiecc <jiecc路径>`，执行实际模板 ST。该脚本验证随附示例的行为；解释器测试不等于Sysmac原生编译。仓库不捆绑该第三方工具。
 
